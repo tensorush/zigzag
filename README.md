@@ -8,7 +8,7 @@
 [![MIT License][license-shield]][license-url]
 
 <p align="center">
-    <img src="images/cornell-box.png">
+    <img src="https://github.com/tensorush/Zigzag-Path-Tracer/blob/master/images/cornell_box.png">
 </p>
 
 <h4 align="center"> 
