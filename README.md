@@ -8,7 +8,7 @@
 [![MIT License][license-shield]][license-url]
 
 <p align="center">
-    <img src="images/cornell-box.ppm">
+    <img src="images/cornell-box.png">
 </p>
 
 <h4 align="center"> 
