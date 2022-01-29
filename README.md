@@ -12,7 +12,7 @@
 </p>
 
 <h4 align="center"> 
-    <p>Result at 512x512 resolution with 256 samples per pixel</p>
+    <p>Result at 512x512 resolution with 256 samples per pixel and 8x SSAA</p>
 </h4>
 
 ## :zap: Multi-threaded CPU path tracer written in Zig ver. 0.9.0.

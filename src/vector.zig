@@ -11,53 +11,41 @@ pub fn cross_product(u: Vec3, v: Vec3) Vec3 {
     return .{ u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0] };
 }
 
-pub fn max_component(u: Vec3) f64 {
+pub fn getMaxComponent(u: Vec3) f64 {
     return std.math.max(std.math.max(u[0], u[1]), u[2]);
 }
 
-pub fn reflect(dir: Vec3, n: Vec3) Vec3 {
-    const h = n * @splat(config.NUM_DIMS, dot_product(dir, n) * 2.0);
-    return h - dir;
+pub fn reflect(direction: Vec3, normal: Vec3) Vec3 {
+    return normal * @splat(config.SCENE_DIMS, dot_product(direction, normal) * @as(f64, config.SCREEN_DIMS)) - direction;
 }
 
 pub fn normalize(u: Vec3) Vec3 {
-    const length_squared = dot_product(u, u);
-    if (length_squared > std.math.f64_epsilon) {
-        const norm_factor = @splat(config.NUM_DIMS, 1.0 / @sqrt(length_squared));
-        return u * norm_factor;
-    }
-    return u;
+    const len_sqrd = dot_product(u, u);
+    return if (len_sqrd > std.math.f64_epsilon) u * @splat(config.SCENE_DIMS, 1.0 / @sqrt(len_sqrd)) else u;
 }
 
-pub fn transform_to_basis(vin: Vec3, vx: Vec3, vy: Vec3, vz: Vec3) Vec3 {
-    const sx = @splat(config.NUM_DIMS, vin[0]);
-    const sy = @splat(config.NUM_DIMS, vin[1]);
-    const sz = @splat(config.NUM_DIMS, vin[2]);
-    return (vx * sx + vy * sy + vz * sz);
+pub fn transformIntoBasis(u_in: Vec3, u_x: Vec3, u_y: Vec3, u_z: Vec3) Vec3 {
+    return (u_x * @splat(config.SCENE_DIMS, u_in[0]) + u_y * @splat(config.SCENE_DIMS, u_in[1]) + u_z * @splat(config.SCENE_DIMS, u_in[2]));
 }
 
-pub fn new_normal(x: f64, y: f64, z: f64) Vec3 {
-    const length_squared = x * x + y * y + z * z;
-    if (length_squared > std.math.f64_epsilon) {
-        const length = @sqrt(length_squared);
-        return Vec3{ x, y, z } / @splat(config.NUM_DIMS, length);
-    }
-    return .{ x, y, z };
+pub fn create_unit_vector(x: f64, y: f64, z: f64) Vec3 {
+    const len_sqrd = x * x + y * y + z * z;
+    return if (len_sqrd > std.math.f64_epsilon) Vec3{ x, y, z } / @splat(config.SCENE_DIMS, @sqrt(len_sqrd)) else .{ x, y, z };
 }
 
-pub const Axes = struct {
-    a: Vec3,
-    b: Vec3,
+pub const Basis = struct {
+    axis_2: Vec3,
+    axis_3: Vec3,
 };
 
-pub fn build_basis(v1: Vec3) Axes {
-    var v2: Vec3 = undefined;
-    if (@fabs(v1[0]) > @fabs(v1[1])) {
-        const oo_len = 1.0 / @sqrt(v1[0] * v1[0] + v1[2] * v1[2]);
-        v2 = .{ -v1[2] * oo_len, 0.0, v1[0] * oo_len };
+pub fn buildBasis(u_1: Vec3) Basis {
+    var u_2: Vec3 = undefined;
+    if (@fabs(u_1[0]) > @fabs(u_1[1])) {
+        const len = 1.0 / @sqrt(u_1[0] * u_1[0] + u_1[2] * u_1[2]);
+        u_2 = .{ -u_1[2] * len, 0.0, u_1[0] * len };
     } else {
-        const oo_len = 1.0 / @sqrt(v1[1] * v1[1] + v1[2] * v1[2]);
-        v2 = .{ 0.0, v1[2] * oo_len, -v1[1] * oo_len };
+        const len = 1.0 / @sqrt(u_1[1] * u_1[1] + u_1[2] * u_1[2]);
+        u_2 = .{ 0.0, u_1[2] * len, -u_1[1] * len };
     }
-    return .{ .a = v2, .b = cross_product(v1, v2) };
+    return .{ .axis_2 = u_2, .axis_3 = cross_product(u_1, u_2) };
 }

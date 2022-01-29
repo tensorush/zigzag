@@ -8,9 +8,9 @@ const material = @import("material.zig");
 
 const Vec3 = config.Vec3;
 
-pub const IntersectResult = struct {
-    objectIndex: ?usize = undefined,
-    t: f64 = std.math.f64_max,
+pub const Hit = struct {
+    object_idx: ?usize = undefined,
+    ray_scale_factor: f64 = std.math.f64_max,
 };
 
 pub const Scene = struct {
@@ -18,54 +18,53 @@ pub const Scene = struct {
     lights: std.ArrayList(usize),
     camera: *camera.Camera,
 
-    pub fn intersect(self: *Scene, cur_ray: ray.Ray) IntersectResult {
-        var result: IntersectResult = .{};
-        for (self.objects.items) |cur_sphere, index| {
-            const t = cur_sphere.intersects(cur_ray);
-            if (t > 0.0 and t < result.t) {
-                result.t = t;
-                result.objectIndex = index;
+    pub fn intersect(self: *Scene, cur_ray: ray.Ray) Hit {
+        var hit: Hit = .{};
+        var ray_scale_factor: f64 = undefined;
+        for (self.objects.items) |cur_sphere, idx| {
+            ray_scale_factor = cur_sphere.computeRaySphereHit(cur_ray);
+            if (ray_scale_factor > 0.0 and ray_scale_factor < hit.ray_scale_factor) {
+                hit.ray_scale_factor = ray_scale_factor;
+                hit.object_idx = idx;
             }
         }
-        return result;
+        return hit;
     }
 
-    pub fn collect_lights(self: *Scene) !void {
-        for (self.objects.items) |obj, light_index| {
-            if (obj.is_light()) {
-                try self.lights.append(light_index);
+    pub fn collectLights(self: *Scene) !void {
+        for (self.objects.items) |object, light_idx| {
+            if (object.isLight()) {
+                try self.lights.append(light_idx);
             }
         }
     }
 };
 
-pub fn sample_lights(scene: *Scene, intersection: Vec3, normal: Vec3, ray_dir: Vec3, cur_material: *const material.Material) Vec3 {
+pub fn sampleLights(scene: *Scene, hit_point: Vec3, normal: Vec3, ray_direction: Vec3, cur_material: *const material.Material) Vec3 {
     var color = config.ZERO_VECTOR;
-    for (scene.lights.items) |light_index| {
-        const light = scene.objects.items[light_index];
-        var l = light.center - intersection;
-        const light_dist_sqr = vector.dot_product(l, l);
-        l = vector.normalize(l);
-        var d = vector.dot_product(normal, l);
-        var shadow_ray = ray.Ray{ .origin = intersection, .dir = l };
-        var shadow_result = scene.intersect(shadow_ray);
-        if (shadow_result.objectIndex) |shadow_index| {
-            if (shadow_index == light_index) {
-                if (d > 0.0) {
-                    const sin_alpha_max_sqr = light.radius_squared / light_dist_sqr;
-                    const cos_alpha_max = @sqrt(1.0 - sin_alpha_max_sqr);
+    for (scene.lights.items) |light_idx| {
+        const light = scene.objects.items[light_idx];
+        var hit_point_to_light_center = light.center - hit_point;
+        const distance_to_light_sqrd = vector.dot_product(hit_point_to_light_center, hit_point_to_light_center);
+        hit_point_to_light_center = vector.normalize(hit_point_to_light_center);
+        var cos_theta = vector.dot_product(normal, hit_point_to_light_center);
+        var shadow_ray = ray.Ray{ .origin = hit_point, .direction = hit_point_to_light_center };
+        var shadow_ray_hit = scene.intersect(shadow_ray);
+        if (shadow_ray_hit.object_idx) |shadow_idx| {
+            if (shadow_idx == light_idx) {
+                if (cos_theta > 0.0) {
+                    const sin_alpha_max_sqrd = light.radius_sqrd / distance_to_light_sqrd;
+                    const cos_alpha_max = @sqrt(1.0 - sin_alpha_max_sqrd);
                     const omega = 2.0 * (1.0 - cos_alpha_max);
-                    d *= omega;
-                    const c = cur_material.diffuse * light.material.emissive;
-                    color += c * @splat(config.NUM_DIMS, d);
+                    cos_theta *= omega;
+                    color += cur_material.diffuse * light.material.emissive * @splat(config.SCENE_DIMS, cos_theta);
                 }
                 if (cur_material.material_type == material.MaterialType.GLOSSY or cur_material.material_type == material.MaterialType.MIRROR) {
-                    const reflected = vector.reflect(l, normal);
-                    d = -vector.dot_product(reflected, ray_dir);
-                    if (d > 0.0) {
-                        const smul = @splat(config.NUM_DIMS, std.math.pow(f64, d, cur_material.exp));
-                        const spec_color = cur_material.specular * smul;
-                        color += spec_color;
+                    const reflected_direction = vector.reflect(hit_point_to_light_center, normal);
+                    cos_theta = -vector.dot_product(reflected_direction, ray_direction);
+                    if (cos_theta > 0.0) {
+                        const specular_color = cur_material.specular * @splat(config.SCENE_DIMS, std.math.pow(f64, cos_theta, cur_material.specular_exponent));
+                        color += specular_color;
                     }
                 }
             }
