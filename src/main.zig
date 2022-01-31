@@ -18,7 +18,7 @@ pub fn main() !void {
     const allocator = arena.allocator();
     // Camera
     const field_of_view = std.math.tan(@as(f64, 55.0 * std.math.pi / 180.0 * 0.5));
-    var cur_camera = camera.Camera{ .forward = vector.create_unit_vector(0.0, -0.042612, -1.0), .field_of_view = field_of_view };
+    var cur_camera = camera.Camera{ .direction = vector.create_unit_vector(0.0, -0.042612, -1.0), .field_of_view = field_of_view };
     // Materials
     const diffuse_black = material.Material{};
     const diffuse_grey = material.Material{ .diffuse = .{ 0.75, 0.75, 0.75 } };

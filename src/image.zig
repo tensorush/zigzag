@@ -14,7 +14,6 @@ pub fn getColor(u: Vec3) std.meta.Vector(3, u32) {
 pub fn createImage(pixels: []const u8) !void {
     const image_file = try std.fs.cwd().createFile(config.IMAGE_FILE_PATH, .{});
     defer image_file.close();
-
     var image_file_stream = std.io.bufferedWriter(image_file.writer()).writer();
     try image_file_stream.print("P3\n{} {} {}\n", .{ config.SCREEN_SIDE, config.SCREEN_SIDE, config.NUM_COLORS });
     var channel_idx: usize = 0;

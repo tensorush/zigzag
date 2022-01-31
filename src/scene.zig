@@ -14,9 +14,9 @@ pub const Hit = struct {
 };
 
 pub const Scene = struct {
-    objects: std.ArrayList(sphere.Sphere),
-    lights: std.ArrayList(usize),
     camera: *camera.Camera,
+    lights: std.ArrayList(usize),
+    objects: std.ArrayList(sphere.Sphere),
 
     pub fn intersect(self: *Scene, cur_ray: ray.Ray) Hit {
         var hit: Hit = .{};
@@ -53,7 +53,7 @@ pub fn sampleLights(scene: *Scene, hit_point: Vec3, normal: Vec3, ray_direction:
         if (shadow_ray_hit.object_idx) |shadow_idx| {
             if (shadow_idx == light_idx) {
                 if (cos_theta > 0.0) {
-                    const sin_alpha_max_sqrd = light.radius_sqrd / distance_to_light_sqrd;
+                    const sin_alpha_max_sqrd = light.radius * light.radius / distance_to_light_sqrd;
                     const cos_alpha_max = @sqrt(1.0 - sin_alpha_max_sqrd);
                     const omega = 2.0 * (1.0 - cos_alpha_max);
                     cos_theta *= omega;

@@ -4,8 +4,8 @@ const config = @import("config.zig");
 const Vec3 = config.Vec3;
 
 pub const Camera = struct {
-    forward: Vec3,
     field_of_view: f64,
+    direction: Vec3,
 };
 
 pub fn samplePixels(samples: *[config.SAMPLES_PER_PIXEL * config.SCREEN_DIMS]f64, rng: *std.rand.Random) void {

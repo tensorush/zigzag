@@ -10,15 +10,15 @@ pub const WorkItem = struct {
 };
 
 pub const WorkerThread = struct {
-    queue: *std.atomic.Queue(WorkItem),
-    job_counter: std.atomic.Atomic(u32) = std.atomic.Atomic(u32).init(0),
-    cur_job_counter: u32 = 0,
     done: std.atomic.Atomic(bool) = std.atomic.Atomic(bool).init(false),
     done_count: *std.atomic.Atomic(u32),
+    job_count: std.atomic.Atomic(u32) = std.atomic.Atomic(u32).init(0),
+    cur_job_count: u32 = 0,
+    queue: *std.atomic.Queue(WorkItem),
 
     pub fn wake(self: *@This()) void {
-        _ = self.job_counter.fetchAdd(1, .Release);
-        std.Thread.Futex.wake(&self.job_counter, 1);
+        _ = self.job_count.fetchAdd(1, .Release);
+        std.Thread.Futex.wake(&self.job_count, 1);
     }
 
     pub fn pushJobAndWake(self: *@This(), node: *std.atomic.Queue(WorkItem).Node) void {
@@ -27,16 +27,22 @@ pub const WorkerThread = struct {
     }
 
     pub fn waitForJob(self: *@This()) !void {
-        var global_job_counter: u32 = undefined;
+        var global_job_count: u32 = undefined;
         while (true) {
-            global_job_counter = self.job_counter.load(.Acquire);
-            if (global_job_counter != self.cur_job_counter) {
+            global_job_count = self.job_count.load(.Acquire);
+            if (global_job_count != self.cur_job_count) {
                 break;
             }
-            std.Thread.Futex.wait(&self.job_counter, self.cur_job_counter, null) catch unreachable;
+            std.Thread.Futex.wait(&self.job_count, self.cur_job_count, null) catch unreachable;
         }
     }
 };
+
+pub fn joinThread(thread: std.Thread, data: *WorkerThread) void {
+    data.done.store(true, .Release);
+    data.wake();
+    thread.join();
+}
 
 pub fn launchWorkerThread(worker_data: *WorkerThread) !void {
     var work_item: WorkItem = undefined;
@@ -50,12 +56,6 @@ pub fn launchWorkerThread(worker_data: *WorkerThread) !void {
             try worker_data.waitForJob();
         }
     }
-}
-
-pub fn joinThread(thread: std.Thread, data: *WorkerThread) void {
-    data.done.store(true, .Release);
-    data.wake();
-    thread.join();
 }
 
 pub fn waitUntilDone(done_count: *std.atomic.Atomic(u32), target_count: u32) !void {

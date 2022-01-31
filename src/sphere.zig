@@ -6,10 +6,9 @@ const material = @import("material.zig");
 const Vec3 = config.Vec3;
 
 pub const Sphere = struct {
+    material: *const material.Material,
     radius: f64,
     center: Vec3,
-    material: *const material.Material,
-    radius_sqrd: f64 = 0.0,
 
     pub fn isLight(self: Sphere) bool {
         return vector.dot_product(self.material.emissive, self.material.emissive) > 0.0;
@@ -18,7 +17,7 @@ pub const Sphere = struct {
     pub fn computeRaySphereHit(self: Sphere, cur_ray: ray.Ray) f64 {
         const ray_origin_to_sphere_center = self.center - cur_ray.origin;
         const b = vector.dot_product(ray_origin_to_sphere_center, cur_ray.direction);
-        var discriminant = b * b - vector.dot_product(ray_origin_to_sphere_center, ray_origin_to_sphere_center) + self.radius_sqrd;
+        var discriminant = b * b - vector.dot_product(ray_origin_to_sphere_center, ray_origin_to_sphere_center) + self.radius * self.radius;
         if (discriminant < 0.0) {
             return 0.0;
         }
@@ -36,5 +35,5 @@ pub const Sphere = struct {
 };
 
 pub fn make_sphere(radius: f64, center: Vec3, cur_material: *const material.Material) Sphere {
-    return .{ .radius = radius, .center = center, .material = cur_material, .radius_sqrd = radius * radius };
+    return .{ .radius = radius, .center = center, .material = cur_material };
 }

@@ -13,10 +13,10 @@ pub const MaterialType = enum {
 
 pub const Material = struct {
     material_type: MaterialType = MaterialType.DIFFUSE,
+    specular_exponent: f64 = 0.0,
     diffuse: Vec3 = config.ZERO_VECTOR,
     emissive: Vec3 = config.ZERO_VECTOR,
     specular: Vec3 = config.ZERO_VECTOR,
-    specular_exponent: f64 = 0.0,
 };
 
 pub fn sampleHemisphereDiffuse(x_sphere_sample: f64, y_sphere_sample: f64) Vec3 {
