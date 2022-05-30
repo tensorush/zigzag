@@ -11,13 +11,19 @@
     <img src="https://github.com/tensorush/Zigzag-Path-Tracer/blob/master/images/cornell_box.png">
 </p>
 
-<h4 align="center"> 
+<h4 align="center">
     <p>Result at 512x512 resolution with 256 samples per pixel and 8x SSAA</p>
 </h4>
 
 ## :zap: Multi-threaded CPU path tracer written in Zig ver. 0.9.0.
 
 > ### _Any contributions are very welcome!_ :hugs:
+
+## :man_teacher: Learning Resources
+
+- ### :card_file_box: [Awesome Zig Learning](https://github.com/tensorush/Awesome-PL-Learning#zap-zig)
+
+- ### :card_file_box: [Awesome Ray Tracing Learning](https://github.com/tensorush/Awesome-3D-Programming#high_brightness-ray-tracing)
 
 <!-- MARKDOWN LINKS -->
 
