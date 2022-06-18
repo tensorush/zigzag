@@ -1,10 +1,9 @@
 const Builder = @import("std").build.Builder;
 
-
 pub fn build(builder: *Builder) void {
     const mode = builder.standardReleaseOptions();
     const target = builder.standardTargetOptions(.{});
-    
+
     const exe = builder.addExecutable("zigzag-path-tracer", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);

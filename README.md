@@ -1,4 +1,4 @@
-# :zap: **Zigzag Path Tracer**
+# :zap: :high_brightness: **Zigzag Path Tracer**
 
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](https://github.com/tensorush/Zigzag-Path-Tracer/pulls)
 [![Contributors][contributors-shield]][contributors-url]
@@ -15,7 +15,7 @@
     <p>Result at 512x512 resolution with 256 samples per pixel and 8x SSAA</p>
 </h4>
 
-## :zap: Multi-threaded CPU path tracer written in Zig ver. 0.9.0.
+## :trident: Multi-threaded CPU path tracer written in Zig ver. 0.9.1.
 
 > ### _Any contributions are very welcome!_ :hugs:
 
