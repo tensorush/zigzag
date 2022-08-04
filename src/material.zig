@@ -1,6 +1,5 @@
 const std = @import("std");
 const ray = @import("ray.zig");
-const config = @import("config.zig");
 const vector = @import("vector.zig");
 
 pub const MaterialType = enum { DIFFUSE, GLOSSY, MIRROR };
@@ -18,13 +17,13 @@ pub fn interreflectSpecular(normal: vector.Vec4, hit_point: vector.Vec4, x_spher
     const reflected_direction = vector.normalize(vector.reflect(view_direction, normal));
     const basis = vector.buildBasis(reflected_direction);
     const sampled_direction = sampleHemisphereSpecular(x_sphere_sample, y_sphere_sample, specular_exponent);
-    return .{ .origin = hit_point, .direction = vector.transformIntoBasis(sampled_direction, basis.axis2, basis.axis3, reflected_direction) };
+    return .{ .direction = vector.transformIntoBasis(sampled_direction, basis.axis2, basis.axis3, reflected_direction), .origin = hit_point };
 }
 
 pub fn interreflectDiffuse(normal: vector.Vec4, hit_point: vector.Vec4, x_sphere_sample: f64, y_sphere_sample: f64) ray.Ray {
     const basis = vector.buildBasis(normal);
     const sampled_direction = sampleHemisphereDiffuse(x_sphere_sample, y_sphere_sample);
-    return .{ .origin = hit_point, .direction = vector.transformIntoBasis(sampled_direction, basis.axis2, basis.axis3, normal) };
+    return .{ .direction = vector.transformIntoBasis(sampled_direction, basis.axis2, basis.axis3, normal), .origin = hit_point };
 }
 
 pub fn sampleHemisphereSpecular(x_sphere_sample: f64, y_sphere_sample: f64, specular_exponent: f64) vector.Vec4 {
@@ -35,7 +34,7 @@ pub fn sampleHemisphereSpecular(x_sphere_sample: f64, y_sphere_sample: f64, spec
 }
 
 pub fn sampleHemisphereDiffuse(x_sphere_sample: f64, y_sphere_sample: f64) vector.Vec4 {
-    const r = @sqrt(y_sphere_sample);
+    const radius = @sqrt(y_sphere_sample);
     const phi = 2.0 * std.math.pi * x_sphere_sample;
-    return .{ @cos(phi) * r, @sin(phi) * r, @sqrt(1.0 - r * r) };
+    return .{ @cos(phi) * radius, @sin(phi) * radius, @sqrt(1.0 - radius * radius) };
 }

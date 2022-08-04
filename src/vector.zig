@@ -41,6 +41,7 @@ pub fn normalize(u: Vec4) Vec4 {
 pub fn reflect(direction: Vec4, normal: Vec4) Vec4 {
     return normal * @splat(config.VECTOR_LEN, dotProduct(direction, normal) * @as(f64, config.NUM_SCREEN_DIMS)) - direction;
 }
+
 pub fn crossProduct(u: Vec4, v: Vec4) Vec4 {
     return .{ u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0] };
 }

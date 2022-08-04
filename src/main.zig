@@ -26,16 +26,16 @@ pub fn main() (std.mem.Allocator.Error || std.os.GetRandomError || std.Thread.Cp
     const mirror = material.Material{ .material_type = material.MaterialType.MIRROR, .diffuse = @splat(config.VECTOR_LEN, @as(f64, 0.99)) };
     const glossy_white = material.Material{ .material_type = material.MaterialType.GLOSSY, .diffuse = .{ 0.3, 0.05, 0.05 }, .specular = @splat(config.VECTOR_LEN, @as(f64, 0.69)), .specular_exponent = 45.0 };
     // Scene
-    var cornell_box = scene.Scene{ .objects = try std.ArrayList(sphere.Sphere).initCapacity(allocator, 16), .lights = try std.ArrayList(usize).initCapacity(allocator, 16), .camera = &cur_camera };
-    try cornell_box.objects.append(sphere.makeSphere(16.5, .{ 76.0, 16.5, 78.0 }, &mirror));
-    try cornell_box.objects.append(sphere.makeSphere(1e5, .{ 50.0, 1e5, 81.6 }, &diffuse_grey));
-    try cornell_box.objects.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, 1e5 }, &diffuse_grey));
-    try cornell_box.objects.append(sphere.makeSphere(10.5, .{ 50.0, 65.1, 81.6 }, &white_light));
-    try cornell_box.objects.append(sphere.makeSphere(16.5, .{ 27.0, 16.5, 57.0 }, &glossy_white));
-    try cornell_box.objects.append(sphere.makeSphere(1e5, .{ 1e5 + 1.0, 40.8, 81.6 }, &diffuse_red));
-    try cornell_box.objects.append(sphere.makeSphere(1e5, .{ 50.0, -1e5 + 81.6, 81.6 }, &diffuse_grey));
-    try cornell_box.objects.append(sphere.makeSphere(1e5, .{ -1e5 + 99.0, 40.8, 81.6 }, &diffuse_blue));
-    try cornell_box.objects.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, -1e5 + 170.0 }, &diffuse_black));
+    var cornell_box = scene.Scene{ .spheres = try std.ArrayList(sphere.Sphere).initCapacity(allocator, 16), .lights = try std.ArrayList(usize).initCapacity(allocator, 16), .camera = &cur_camera };
+    try cornell_box.spheres.append(sphere.makeSphere(16.5, .{ 76.0, 16.5, 78.0 }, &mirror));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 1e5, 81.6 }, &diffuse_grey));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, 1e5 }, &diffuse_grey));
+    try cornell_box.spheres.append(sphere.makeSphere(10.5, .{ 50.0, 65.1, 81.6 }, &white_light));
+    try cornell_box.spheres.append(sphere.makeSphere(16.5, .{ 27.0, 16.5, 57.0 }, &glossy_white));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 1e5 + 1.0, 40.8, 81.6 }, &diffuse_red));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, -1e5 + 81.6, 81.6 }, &diffuse_grey));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ -1e5 + 99.0, 40.8, 81.6 }, &diffuse_blue));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, -1e5 + 170.0 }, &diffuse_black));
     try cornell_box.collectLights();
     // Path tracer
     var cur_tracer = tracer.Tracer{ .scene = &cornell_box };
@@ -51,7 +51,7 @@ pub fn main() (std.mem.Allocator.Error || std.os.GetRandomError || std.Thread.Cp
     try framebuffer.appendNTimes(0, config.SCREEN_SIDE_LEN * config.SCREEN_SIDE_LEN * config.VECTOR_LEN);
     // Cores
     const num_cores = try std.Thread.getCpuCount();
-    std.debug.print("Found {} CPU cores\n", .{num_cores});
+    std.debug.print("Number of CPU cores: {d}\n", .{num_cores});
     // Workers
     var num_workers = num_cores;
     var worker_data = try std.ArrayList(worker.Worker).initCapacity(allocator, num_workers);
@@ -83,11 +83,11 @@ pub fn main() (std.mem.Allocator.Error || std.os.GetRandomError || std.Thread.Cp
     }
     try worker.waitUntilDone(&done_count, NUM_CHUNKS);
     // Time
-    const time_taken = std.time.milliTimestamp() - start_time;
-    std.debug.print("Took {d} seconds\n", .{@intToFloat(f64, time_taken) / 1000.0});
+    const time = std.time.milliTimestamp() - start_time;
+    std.debug.print("Time: {d} seconds\n", .{@intToFloat(f64, time) / 1000.0});
     // Image
     try image.createImage(framebuffer.items);
-    for (threads.items) |thread, idx| {
-        worker.joinThread(thread, &worker_data.items[idx]);
+    for (threads.items) |thread, i| {
+        worker.joinThread(thread, &worker_data.items[i]);
     }
 }

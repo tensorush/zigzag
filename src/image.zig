@@ -2,18 +2,20 @@ const std = @import("std");
 const config = @import("config.zig");
 const vector = @import("vector.zig");
 
+pub const Color = std.meta.Vector(config.NUM_COLOR_CHANNELS, u8);
+
 pub fn createImage(pixels: []const u8) (std.fs.File.OpenError || std.os.WriteError)!void {
     const image_file = try std.fs.cwd().createFile(config.IMAGE_FILE_PATH, .{});
     defer image_file.close();
     var writer = std.io.bufferedWriter(image_file.writer()).writer();
-    try writer.print("P3\n{} {} {}\n", .{ config.SCREEN_SIDE_LEN, config.SCREEN_SIDE_LEN, config.NUM_COLORS });
+    try writer.print("P3\n{d} {d} {d}\n", .{ config.SCREEN_SIDE_LEN, config.SCREEN_SIDE_LEN, config.NUM_COLORS });
     var channel_idx: usize = 0;
     while (channel_idx < config.SCREEN_SIDE_LEN * config.SCREEN_SIDE_LEN * config.VECTOR_LEN) : (channel_idx += config.VECTOR_LEN) {
-        try writer.print("{} {} {}\n", .{ pixels[channel_idx], pixels[channel_idx + 1], pixels[channel_idx + 2] });
+        try writer.print("{d} {d} {d}\n", .{ pixels[channel_idx], pixels[channel_idx + 1], pixels[channel_idx + 2] });
     }
 }
 
-pub fn getColor(u: vector.Vec4) std.meta.Vector(config.NUM_COLOR_CHANNELS, u8) {
+pub fn getColor(u: vector.Vec4) Color {
     return .{ getColorComponent(u[2]), getColorComponent(u[1]), getColorComponent(u[0]) };
 }
 
