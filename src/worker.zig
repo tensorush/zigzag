@@ -1,13 +1,6 @@
 const std = @import("std");
-const Config = @import("Config.zig");
+const config = @import("config.zig");
 const tracer = @import("tracer.zig");
-
-pub const WorkChunk = struct {
-    tracer: *tracer.Tracer,
-    buffer: *[]u8,
-    offset: usize,
-    size: usize,
-};
 
 pub const Worker = struct {
     done: std.atomic.Atomic(bool) = std.atomic.Atomic(bool).init(false),
@@ -16,28 +9,7 @@ pub const Worker = struct {
     queue: *std.atomic.Queue(WorkChunk),
     cur_job_count: u32 = 0,
 
-    pub fn wake(self: *Worker) void {
-        _ = self.job_count.fetchAdd(1, .Release);
-        std.Thread.Futex.wake(&self.job_count, 1);
-    }
-
-    pub fn put(self: *Worker, node: *std.atomic.Queue(WorkChunk).Node) void {
-        self.queue.put(node);
-        self.wake();
-    }
-
-    pub fn wait(self: *Worker) !void {
-        var global_job_count: u32 = undefined;
-        while (true) {
-            global_job_count = self.job_count.load(.Acquire);
-            if (global_job_count != self.cur_job_count) {
-                break;
-            }
-            std.Thread.Futex.wait(&self.job_count, self.cur_job_count, null) catch unreachable;
-        }
-    }
-
-    pub fn launch(self: *Worker) !void {
+    pub fn launch(self: *Worker) (std.os.GetRandomError || error{TimedOut})!void {
         var work_item: WorkChunk = undefined;
         while (!self.done.load(.Acquire)) {
             if (!self.queue.isEmpty()) {
@@ -50,21 +22,45 @@ pub const Worker = struct {
             }
         }
     }
+
+    pub fn wait(self: *Worker) error{TimedOut}!void {
+        var global_job_count: u32 = undefined;
+        while (true) {
+            global_job_count = self.job_count.load(.Acquire);
+            if (global_job_count != self.cur_job_count) break;
+            try std.Thread.Futex.wait(&self.job_count, self.cur_job_count, null);
+        }
+    }
+
+    pub fn put(self: *Worker, node: *std.atomic.Queue(WorkChunk).Node) void {
+        self.queue.put(node);
+        self.wake();
+    }
+
+    pub fn wake(self: *Worker) void {
+        _ = self.job_count.fetchAdd(1, .Release);
+        std.Thread.Futex.wake(&self.job_count, 1);
+    }
 };
+
+pub const WorkChunk = struct {
+    tracer: *tracer.Tracer,
+    buffer: *[]u8,
+    offset: usize,
+    size: usize,
+};
+
+pub fn waitUntilDone(done_count: *std.atomic.Atomic(u32), target_count: u32) error{TimedOut}!void {
+    var cur_done_count: u32 = undefined;
+    while (config.IS_MULTI_THREADED) {
+        cur_done_count = done_count.load(.Acquire);
+        if (cur_done_count == target_count) break;
+        try std.Thread.Futex.wait(done_count, cur_done_count, null);
+    }
+}
 
 pub fn joinThread(thread: std.Thread, worker: *Worker) void {
     worker.done.store(true, .Release);
     worker.wake();
     thread.join();
-}
-
-pub fn waitUntilDone(done_count: *std.atomic.Atomic(u32), target_count: u32) !void {
-    var cur_done_count: u32 = undefined;
-    while (Config.IS_MULTI_THREADED) {
-        cur_done_count = done_count.load(.Acquire);
-        if (cur_done_count == target_count) {
-            break;
-        }
-        std.Thread.Futex.wait(done_count, cur_done_count, null) catch unreachable;
-    }
 }
