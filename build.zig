@@ -1,10 +1,10 @@
 const Builder = @import("std").build.Builder;
 
 pub fn build(builder: *Builder) void {
-    const mode = builder.standardReleaseOptions();
     const target = builder.standardTargetOptions(.{});
+    const mode = builder.standardReleaseOptions();
 
-    const exe = builder.addExecutable("zigzag", "src/main.zig");
+    const exe = builder.addExecutable("Zigzag", "src/main.zig");
     exe.setBuildMode(mode);
     exe.setTarget(target);
     exe.install();
