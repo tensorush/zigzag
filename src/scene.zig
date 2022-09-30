@@ -34,7 +34,7 @@ pub const Hit = struct {
 };
 
 pub fn sampleLights(scene: *Scene, hit_point: vector.Vec4, normal: vector.Vec4, ray_direction: vector.Vec4, cur_material: *const material.Material) vector.Vec4 {
-    var hit_to_light_center: vector.Vec4= undefined;
+    var hit_to_light_center: vector.Vec4 = undefined;
     var distance_to_light_sqrd: f64 = undefined;
     var sin_alpha_max_sqrd: f64 = undefined;
     var light: sphere.Sphere = undefined;
