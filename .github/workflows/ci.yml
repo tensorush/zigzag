@@ -9,8 +9,6 @@ on:
     branches: [master]
     paths:
       - "**.zig"
-  schedule:
-    - cron: "0 0 * * *"
 
 jobs:
   run:
