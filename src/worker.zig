@@ -28,7 +28,7 @@ pub const Worker = struct {
         while (true) {
             global_job_count = self.job_count.load(.Acquire);
             if (global_job_count != self.cur_job_count) break;
-            try std.Thread.Futex.wait(&self.job_count, self.cur_job_count, null);
+            std.Thread.Futex.wait(&self.job_count, self.cur_job_count);
         }
     }
 
@@ -55,7 +55,7 @@ pub fn waitUntilDone(done_count: *std.atomic.Atomic(u32), target_count: u32) err
     while (config.IS_MULTI_THREADED) {
         cur_done_count = done_count.load(.Acquire);
         if (cur_done_count == target_count) break;
-        try std.Thread.Futex.wait(done_count, cur_done_count, null);
+        std.Thread.Futex.wait(done_count, cur_done_count);
     }
 }
 

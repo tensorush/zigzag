@@ -18,24 +18,24 @@ pub fn main() (std.mem.Allocator.Error || std.os.GetRandomError || std.Thread.Cp
     const field_of_view = std.math.tan(@as(f64, 55.0 * std.math.pi / 180.0 * 0.5));
     var cur_camera = camera.Camera{ .direction = vector.createUnitVector(0.0, -0.042612, -1.0), .field_of_view = field_of_view };
     // Materials
-    const diffuse_black = material.Material{};
-    const diffuse_grey = material.Material{ .diffuse = .{ 0.75, 0.75, 0.75 } };
-    const diffuse_red = material.Material{ .diffuse = .{ 0.95, 0.15, 0.15 } };
-    const diffuse_blue = material.Material{ .diffuse = .{ 0.25, 0.25, 0.7 } };
-    const white_light = material.Material{ .emissive = @splat(config.VECTOR_LEN, @as(f64, 10)) };
-    const mirror = material.Material{ .material_type = material.MaterialType.MIRROR, .diffuse = @splat(config.VECTOR_LEN, @as(f64, 0.99)) };
-    const glossy_white = material.Material{ .material_type = material.MaterialType.GLOSSY, .diffuse = .{ 0.3, 0.05, 0.05 }, .specular = @splat(config.VECTOR_LEN, @as(f64, 0.69)), .specular_exponent = 45.0 };
+    const diffuse_gray = material.Material{ .diffuse = .{ 0.75, 0.75, 0.75, 0.0 } };
+    const diffuse_blue = material.Material{ .diffuse = .{ 0.75, 0.25, 0.25, 0.0 } };
+    const diffuse_green = material.Material{ .diffuse = .{ 0.15, 0.95, 0.15, 0.0 } };
+    const diffuse_red = material.Material{ .diffuse = .{ 0.15, 0.15, 0.95, 0.0 } };
+    const white_light = material.Material{ .emissive = @splat(10.0) };
+    const mirror = material.Material{ .material_type = material.MaterialType.MIRROR, .diffuse = @splat(0.99) };
+    const glossy_white = material.Material{ .material_type = material.MaterialType.GLOSSY, .diffuse = .{ 0.3, 0.05, 0.05, 0.0 }, .specular = @splat(0.69), .specular_exponent = 45.0 };
     // Scene
     var cornell_box = scene.Scene{ .spheres = try std.ArrayList(sphere.Sphere).initCapacity(allocator, 16), .lights = try std.ArrayList(usize).initCapacity(allocator, 16), .camera = &cur_camera };
-    try cornell_box.spheres.append(sphere.makeSphere(16.5, .{ 76.0, 16.5, 78.0 }, &mirror));
-    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 1e5, 81.6 }, &diffuse_grey));
-    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, 1e5 }, &diffuse_grey));
-    try cornell_box.spheres.append(sphere.makeSphere(10.5, .{ 50.0, 65.1, 81.6 }, &white_light));
-    try cornell_box.spheres.append(sphere.makeSphere(16.5, .{ 27.0, 16.5, 57.0 }, &glossy_white));
-    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 1e5 + 1.0, 40.8, 81.6 }, &diffuse_red));
-    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, -1e5 + 81.6, 81.6 }, &diffuse_grey));
-    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ -1e5 + 99.0, 40.8, 81.6 }, &diffuse_blue));
-    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, -1e5 + 170.0 }, &diffuse_black));
+    try cornell_box.spheres.append(sphere.makeSphere(16.5, .{ 76.0, 16.5, 78.0, 0.0 }, &mirror));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 1e5, 81.6, 0.0 }, &diffuse_gray));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, 1e5, 0.0 }, &diffuse_gray));
+    try cornell_box.spheres.append(sphere.makeSphere(10.5, .{ 50.0, 65.1, 81.6, 0.0 }, &white_light));
+    try cornell_box.spheres.append(sphere.makeSphere(16.5, .{ 27.0, 16.5, 57.0, 0.0 }, &glossy_white));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 1e5 + 1.0, 40.8, 81.6, 0.0 }, &diffuse_red));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, -1e5 + 81.6, 81.6, 0.0 }, &diffuse_gray));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ -1e5 + 99.0, 40.8, 81.6, 0.0 }, &diffuse_green));
+    try cornell_box.spheres.append(sphere.makeSphere(1e5, .{ 50.0, 40.8, -1e5 + 170.0, 0.0 }, &diffuse_blue));
     try cornell_box.collectLights();
     // Path tracer
     var cur_tracer = tracer.Tracer{ .scene = &cornell_box };
@@ -44,11 +44,12 @@ pub fn main() (std.mem.Allocator.Error || std.os.GetRandomError || std.Thread.Cp
         try std.os.getrandom(std.mem.asBytes(&seed));
         break :blk seed;
     });
-    const rng = &prng.random();
+    const rng = prng.random();
     camera.samplePixels(&cur_tracer.samples, rng);
     // Framebuffer
-    var framebuffer = std.ArrayList(u8).init(allocator);
-    try framebuffer.appendNTimes(0, config.SCREEN_SIDE_LEN * config.SCREEN_SIDE_LEN * config.VECTOR_LEN);
+    var framebuffer = try std.ArrayList(u8).initCapacity(allocator, config.SCREEN_SIDE_LEN * config.SCREEN_SIDE_LEN * config.VECTOR_LEN);
+    framebuffer.expandToCapacity();
+    @memset(framebuffer.items, 0);
     // Cores
     const num_cores = try std.Thread.getCpuCount();
     std.debug.print("Number of CPU cores: {d}\n", .{num_cores});
@@ -84,10 +85,10 @@ pub fn main() (std.mem.Allocator.Error || std.os.GetRandomError || std.Thread.Cp
     try worker.waitUntilDone(&done_count, NUM_CHUNKS);
     // Time
     const time = std.time.milliTimestamp() - start_time;
-    std.debug.print("Time: {d} seconds\n", .{@intToFloat(f64, time) / 1000.0});
+    std.debug.print("Time: {d} seconds\n", .{@as(f64, @floatFromInt(time)) / 1000.0});
     // Image
     try image.createImage(framebuffer.items);
-    for (threads.items) |thread, i| {
+    for (threads.items, 0..) |thread, i| {
         worker.joinThread(thread, &worker_data.items[i]);
     }
 }

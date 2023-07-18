@@ -7,7 +7,7 @@ pub const Camera = struct {
     field_of_view: f64,
 };
 
-pub fn samplePixels(samples: *[config.NUM_SAMPLES_PER_PIXEL * config.NUM_SCREEN_DIMS]f64, rng: *std.rand.Random) void {
+pub fn samplePixels(samples: *[config.NUM_SAMPLES_PER_PIXEL * config.NUM_SCREEN_DIMS]f64, rng: std.rand.Random) void {
     const num_samples_per_pixel = @as(f64, config.NUM_SAMPLES_PER_PIXEL);
     const x_strata = @sqrt(num_samples_per_pixel);
     const y_strata = num_samples_per_pixel / x_strata;

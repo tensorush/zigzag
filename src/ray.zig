@@ -10,11 +10,11 @@ pub const Ray = struct {
     origin: vector.Vec4,
 
     pub fn computeHitPoint(self: Ray, ray_factor: f64) vector.Vec4 {
-        return self.origin + self.direction * @splat(config.VECTOR_LEN, ray_factor);
+        return self.origin + self.direction * @as(vector.Vec4, @splat(ray_factor));
     }
 };
 
-pub fn tracePath(cur_ray: Ray, cur_scene: *scene.Scene, x_sphere_sample: f64, y_sphere_sample: f64, samples: [config.NUM_SAMPLES_PER_PIXEL * config.NUM_SCREEN_DIMS]f64, rng: *std.rand.Random) vector.Vec4 {
+pub fn tracePath(cur_ray: Ray, cur_scene: *scene.Scene, x_sphere_sample: f64, y_sphere_sample: f64, samples: [config.NUM_SAMPLES_PER_PIXEL * config.NUM_SCREEN_DIMS]f64, rng: std.rand.Random) vector.Vec4 {
     var cur_material: *const material.Material = undefined;
     var color_bleeding_factor = vector.IDENTITY_VECTOR;
     var specular_probability: f64 = undefined;
@@ -42,12 +42,12 @@ pub fn tracePath(cur_ray: Ray, cur_scene: *scene.Scene, x_sphere_sample: f64, y_
             diffuse = cur_material.diffuse;
             if (is_direct) ray_color += cur_material.emissive * color_bleeding_factor;
             max_diffuse = vector.getMaxComponent(diffuse);
-            if (bounce_idx > config.MIN_NUM_BOUNCES or max_diffuse < std.math.f64_epsilon) {
+            if (bounce_idx > config.MIN_NUM_BOUNCES or max_diffuse < std.math.floatEps(f64)) {
                 if (rng.float(f64) > max_diffuse) break;
-                diffuse /= @splat(config.VECTOR_LEN, max_diffuse);
+                diffuse /= @splat(max_diffuse);
             }
             hit_point = traced_ray.computeHitPoint(hit.ray_factor);
-            normal = (hit_point - cur_sphere.center) / @splat(config.VECTOR_LEN, cur_sphere.radius);
+            normal = (hit_point - cur_sphere.center) / @as(vector.Vec4, @splat(cur_sphere.radius));
             if (vector.dotProduct(normal, traced_ray.direction) > 0.0) normal = -normal;
             switch (cur_material.material_type) {
                 .DIFFUSE => {
@@ -66,10 +66,10 @@ pub fn tracePath(cur_ray: Ray, cur_scene: *scene.Scene, x_sphere_sample: f64, y_
                     specular_factor = 1.0 / specular_probability;
                     if (rng.float(f64) > specular_probability) {
                         traced_ray = material.interreflectDiffuse(normal, hit_point, cur_x_sphere_sample, cur_y_sphere_sample);
-                        color_bleeding_factor *= diffuse * @splat(config.VECTOR_LEN, (1.0 / (1.0 - 1.0 / specular_factor)));
+                        color_bleeding_factor *= diffuse * @as(vector.Vec4, @splat((1.0 / (1.0 - 1.0 / specular_factor))));
                     } else {
                         traced_ray = material.interreflectSpecular(normal, hit_point, cur_x_sphere_sample, cur_y_sphere_sample, cur_material.specular_exponent, traced_ray);
-                        color_bleeding_factor *= cur_material.specular * @splat(config.VECTOR_LEN, specular_factor);
+                        color_bleeding_factor *= cur_material.specular * @as(vector.Vec4, @splat(specular_factor));
                     }
                 },
                 .MIRROR => {

@@ -30,11 +30,11 @@ pub fn sampleHemisphereSpecular(x_sphere_sample: f64, y_sphere_sample: f64, spec
     const phi = 2.0 * std.math.pi * x_sphere_sample;
     const cos_theta = std.math.pow(f64, 1.0 - y_sphere_sample, 1.0 / (specular_exponent + 1.0));
     const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
-    return .{ @cos(phi) * sin_theta, @sin(phi) * sin_theta, cos_theta };
+    return .{ @cos(phi) * sin_theta, @sin(phi) * sin_theta, cos_theta, 0.0 };
 }
 
 pub fn sampleHemisphereDiffuse(x_sphere_sample: f64, y_sphere_sample: f64) vector.Vec4 {
     const radius = @sqrt(y_sphere_sample);
     const phi = 2.0 * std.math.pi * x_sphere_sample;
-    return .{ @cos(phi) * radius, @sin(phi) * radius, @sqrt(1.0 - radius * radius) };
+    return .{ @cos(phi) * radius, @sin(phi) * radius, @sqrt(1.0 - radius * radius), 0.0 };
 }

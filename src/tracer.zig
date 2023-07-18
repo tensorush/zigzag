@@ -13,19 +13,19 @@ pub const Tracer = struct {
 
 pub fn tracePaths(tracer: Tracer, pixels: []u8, offset: usize, size: usize) std.os.GetRandomError!void {
     const cur_camera = tracer.scene.camera;
+    const ray_factor: vector.Vec4 = @splat(136.0);
     const start_x = offset % config.SCREEN_SIDE_LEN;
     const start_y = offset / config.SCREEN_SIDE_LEN;
-    const ray_origin = vector.Vec4{ 50.0, 52.0, 295.6 };
     const screen_side = @as(f64, config.SCREEN_SIDE_LEN);
-    const ray_factor = @splat(config.VECTOR_LEN, @as(f64, 136.0));
-    const x_direction = vector.Vec4{ cur_camera.field_of_view, 0.0, 0.0 };
-    const y_direction = vector.normalize(vector.crossProduct(x_direction, cur_camera.direction)) * @splat(config.VECTOR_LEN, cur_camera.field_of_view);
+    const ray_origin = vector.Vec4{ 50.0, 52.0, 295.6, 0.0 };
+    const x_direction = vector.Vec4{ cur_camera.field_of_view, 0.0, 0.0, 0.0 };
+    var y_direction = vector.normalize(vector.crossProduct(x_direction, cur_camera.direction)) * @as(vector.Vec4, @splat(cur_camera.field_of_view));
     var prng = std.rand.DefaultPrng.init(blk: {
         var seed: u64 = undefined;
         try std.os.getrandom(std.mem.asBytes(&seed));
         break :blk seed;
     });
-    const rng = &prng.random();
+    const rng = prng.random();
     var chunk_samples: [config.NUM_SAMPLES_PER_PIXEL * config.NUM_SCREEN_DIMS]f64 = undefined;
     var sphere_samples: [config.NUM_SAMPLES_PER_PIXEL * config.NUM_SCREEN_DIMS]f64 = undefined;
     var anti_aliased_color: vector.Vec4 = undefined;
@@ -51,19 +51,18 @@ pub fn tracePaths(tracer: Tracer, pixels: []u8, offset: usize, size: usize) std.
             raw_color = vector.ZERO_VECTOR;
             sample_idx = 0;
             while (sample_idx < config.NUM_SAMPLES_PER_PIXEL) : (sample_idx += 1) {
-                x_chunk_direction = x_direction * @splat(config.VECTOR_LEN, (((@intToFloat(f64, (anti_aliasing_factor & 1)) + 0.5 + chunk_samples[sample_idx * config.NUM_SCREEN_DIMS]) / 2.0) + @intToFloat(f64, x)) / screen_side - 0.5);
-                y_chunk_direction = y_direction * @splat(config.VECTOR_LEN, -((((@intToFloat(f64, (anti_aliasing_factor >> 1)) + 0.5 + chunk_samples[sample_idx * config.NUM_SCREEN_DIMS + 1]) / 2.0) + @intToFloat(f64, y)) / screen_side - 0.5));
+                x_chunk_direction = x_direction * @as(vector.Vec4, @splat((((@as(f64, @floatFromInt((anti_aliasing_factor & 1))) + 0.5 + chunk_samples[sample_idx * config.NUM_SCREEN_DIMS]) / 2.0) + @as(f64, @floatFromInt(x))) / screen_side - 0.5));
+                y_chunk_direction = y_direction * @as(vector.Vec4, @splat(-((((@as(f64, @floatFromInt((anti_aliasing_factor >> 1))) + 0.5 + chunk_samples[sample_idx * config.NUM_SCREEN_DIMS + 1]) / 2.0) + @as(f64, @floatFromInt(y))) / screen_side - 0.5)));
                 ray_direction = vector.normalize(x_chunk_direction + y_chunk_direction + cur_camera.direction);
                 ray_color = ray.tracePath(.{ .direction = ray_direction, .origin = ray_origin + ray_direction * ray_factor }, tracer.scene, sphere_samples[sample_idx * config.NUM_SCREEN_DIMS], sphere_samples[sample_idx * config.NUM_SCREEN_DIMS + 1], tracer.samples, rng);
-                raw_color += ray_color * @splat(config.VECTOR_LEN, 1.0 / @as(f64, config.NUM_SAMPLES_PER_PIXEL));
+                raw_color += ray_color * @as(vector.Vec4, @splat(1.0 / @as(f64, config.NUM_SAMPLES_PER_PIXEL)));
             }
             anti_aliased_color += raw_color * vector.INVERSE_ANTI_ALIASING_FACTOR;
         }
         color = image.getColor(anti_aliased_color);
-        pixels[pixel_offset + 0] = color[0];
+        pixels[pixel_offset] = color[0];
         pixels[pixel_offset + 1] = color[1];
         pixels[pixel_offset + 2] = color[2];
-        pixels[pixel_offset + 3] = 0;
         x += 1;
         if (x == config.SCREEN_SIDE_LEN) {
             x = 0;
