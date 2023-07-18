@@ -11,14 +11,14 @@
 zig build zigzag
 ```
 
-#### :framed_picture: Render
+#### :framed_picture: Image
 
 <h4 align="center">
-    <p>Resolution 1024x1024 with 256 samples per pixel and 8x SSAA</p>
+    <p>Render at 1024x1024 resolution with 256 samples per pixel and 8x SSAA</p>
 </h4>
 
 <p align="center">
-    <img src="images/cornell_box.png">
+    <img src="images/image.png">
 </p>
 
 <!-- MARKDOWN LINKS -->

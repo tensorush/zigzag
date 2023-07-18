@@ -10,4 +10,4 @@ pub const NUM_SCREEN_DIMS: usize = 1 << 1;
 pub const SCREEN_SIDE_LEN: usize = 1 << 7;
 pub const ANTI_ALIASING_FACTOR: usize = 1 << 3;
 pub const NUM_SAMPLES_PER_PIXEL: usize = 1 << 8;
-pub const IMAGE_FILE_PATH = "images/cornell_box.ppm";
+pub const IMAGE_FILE_PATH = "images/image.ppm";
