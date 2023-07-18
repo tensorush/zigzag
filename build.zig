@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const root_source_file = std.Build.FileSource.relative("src/main.zig");
 
-    // Zigzag
+    // Zigzag path tracer
     const zigzag_step = b.step("zigzag", "Run Zigzag path tracer");
 
     const zigzag = b.addExecutable(.{
@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) void {
         .optimize = .ReleaseFast,
         .version = .{ .major = 1, .minor = 0, .patch = 0 },
     });
+    b.installArtifact(zigzag);
 
     const zigzag_run = b.addRunArtifact(zigzag);
     zigzag_step.dependOn(&zigzag_run.step);
