@@ -1,4 +1,4 @@
-## :zap: :trident: **zigzag**
+## :lizard: :trident: **zigzag**
 
 [![CI][ci-shield]][ci-url]
 [![License][license-shield]][license-url]
