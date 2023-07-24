@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = root_source_file,
         .target = b.standardTargetOptions(.{}),
         .optimize = .ReleaseFast,
-        .version = .{ .major = 1, .minor = 0, .patch = 0 },
+        .version = .{ .major = 1, .minor = 1, .patch = 0 },
     });
     b.installArtifact(zigzag);
 
