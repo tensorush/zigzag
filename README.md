@@ -3,7 +3,7 @@
 [![CI][ci-shield]][ci-url]
 [![License][license-shield]][license-url]
 
-### Multi-threaded CPU path tracer written in Zig.
+### Multi-threaded CPU path tracer.
 
 #### :rocket: Usage
 
