@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
         .name = "zigzag",
         .root_source_file = root_source_file,
         .target = b.standardTargetOptions(.{}),
-        .optimize = .ReleaseFast,
+        .optimize = b.standardOptimizeOption(.{}),
         .version = .{ .major = 1, .minor = 1, .patch = 0 },
     });
     b.installArtifact(zigzag);

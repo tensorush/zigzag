@@ -1,5 +1,4 @@
 const std = @import("std");
-const Tracer = @import("Tracer.zig");
 
 pub const LEN = 1 << 2;
 
