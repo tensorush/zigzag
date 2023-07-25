@@ -4,10 +4,10 @@ const Tracer = @import("Tracer.zig");
 const vector = @import("vector.zig");
 const Worker = @import("Worker.zig");
 
+const FRAME_DIM: u16 = 1 << 5;
 const IS_MULTI_THREADED = true;
-const FRAME_DIM: usize = 1 << 5;
-const CHUNK_SIZE: usize = 1 << 7;
-const MAX_NUM_CORES: usize = 1 << 3;
+const CHUNK_SIZE: u16 = 1 << 7;
+const MAX_NUM_CORES: u8 = 1 << 3;
 const FRAME_SIZE = FRAME_DIM * FRAME_DIM * vector.LEN;
 const NUM_CHUNKS = FRAME_DIM * FRAME_DIM / CHUNK_SIZE;
 
@@ -27,7 +27,7 @@ pub fn main() MainError!void {
     var buf_writer = std.io.bufferedWriter(stdout.writer());
     const writer = buf_writer.writer();
 
-    const num_cores = try std.Thread.getCpuCount();
+    const num_cores: u8 = @intCast(try std.Thread.getCpuCount());
     try writer.print("Number of CPU cores: {d}\n", .{num_cores});
     try buf_writer.flush();
 
@@ -52,14 +52,14 @@ pub fn main() MainError!void {
         var work_queue = std.atomic.Queue(Worker.Chunk).init();
         var done_count = std.atomic.Atomic(u32).init(0);
 
-        var worker_idx: usize = 0;
+        var worker_idx: u8 = 0;
         while (worker_idx < num_cores) : (worker_idx += 1) {
             workers.appendAssumeCapacity(.{ .done_count = &done_count, .queue = &work_queue });
             threads.appendAssumeCapacity(try std.Thread.spawn(.{}, Worker.spawn, .{ &workers.slice()[worker_idx], rng, FRAME_DIM }));
         }
 
-        var chunk_idx: usize = 0;
-        var thread_idx: usize = 0;
+        var chunk_idx: u8 = 0;
+        var thread_idx: u8 = 0;
         while (chunk_idx < NUM_CHUNKS) : (chunk_idx += 1) {
             const node = try allocator.create(std.atomic.Queue(Worker.Chunk).Node);
             node.* = .{ .data = .{ .tracer = &tracer, .frame = frame.slice(), .offset = chunk_idx * CHUNK_SIZE, .size = CHUNK_SIZE } };

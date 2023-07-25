@@ -11,12 +11,12 @@ cur_job_count: u32 = 0,
 
 pub const Chunk = struct {
     tracer: *Tracer,
-    offset: usize,
     frame: []u8,
-    size: usize,
+    offset: u16,
+    size: u16,
 };
 
-pub fn spawn(self: *Worker, rng: std.rand.Random, render_dim: usize) void {
+pub fn spawn(self: *Worker, rng: std.rand.Random, render_dim: u16) void {
     while (!self.is_done.load(.Acquire)) {
         if (self.queue.get()) |chunk| {
             chunk.data.tracer.tracePaths(chunk.data.frame, chunk.data.offset, chunk.data.size, rng, render_dim);

@@ -3,11 +3,11 @@ const vector = @import("vector.zig");
 
 const Scene = @This();
 
-const MAX_NUM_LIGHTS: usize = 1 << 1;
+const MAX_NUM_LIGHTS: usize = 1 << 0;
 const MAX_NUM_SPHERES: usize = 1 << 4;
 
-light_idxs: std.BoundedArray(usize, MAX_NUM_LIGHTS) = undefined,
 spheres: std.BoundedArray(Sphere, MAX_NUM_SPHERES) = undefined,
+light_idxs: std.BoundedArray(u8, MAX_NUM_LIGHTS) = undefined,
 camera: Camera,
 
 pub const Material = struct {

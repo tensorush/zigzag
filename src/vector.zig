@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const LEN = 1 << 2;
+pub const LEN: u16 = 1 << 2;
 
 pub const Vec = @Vector(LEN, f64);
 
