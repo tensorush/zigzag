@@ -11,7 +11,6 @@ const NUM_FRAME_DIMS: u16 = 1 << 1;
 const MIN_NUM_BOUNCES: u8 = 1 << 2;
 const MAX_NUM_BOUNCES: u8 = 1 << 3;
 const NUM_SAMPLES_PER_PIXEL: u16 = 1 << 8;
-const RENDER_FILE_PATH = "renders/render.ppm";
 
 samples: [NUM_SAMPLES_PER_PIXEL * NUM_FRAME_DIMS]f64 = undefined,
 scene: Scene,
@@ -260,8 +259,8 @@ fn reflect(direction: vector.Vec, normal: vector.Vec) vector.Vec {
     return normal * @as(vector.Vec, @splat(vector.dotProduct(direction, normal) * @as(f64, NUM_FRAME_DIMS))) - direction;
 }
 
-pub fn renderPpm(frame: []const u8, render_dim: u16) (std.fs.File.OpenError || std.os.WriteError)!void {
-    const render_file = try std.fs.cwd().createFile(RENDER_FILE_PATH, .{});
+pub fn renderPpm(frame: []const u8, render_dim: u16, render_file_path: []const u8) (std.fs.File.OpenError || std.os.WriteError)!void {
+    const render_file = try std.fs.cwd().createFile(render_file_path, .{});
     defer render_file.close();
     var buf_writer = std.io.bufferedWriter(render_file.writer());
     const writer = buf_writer.writer();

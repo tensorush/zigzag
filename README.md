@@ -7,9 +7,44 @@
 
 #### :rocket: Usage
 
-```zig
-zig build zigzag
-```
+1. Add `zigzag` as a dependency in your `build.zig.zon`.
+
+    <details>
+
+    <summary><code>build.zig.zon</code> example</summary>
+
+    ```zig
+    .{
+        .name = "<name_of_your_package>",
+        .version = "<version_of_your_package>",
+        .dependencies = .{
+            .zigzag = .{
+                .url = "https://github.com/tensorush/zigzag/archive/<git_tag_or_commit_hash>.tar.gz",
+                .hash = "<package_hash>",
+            },
+        },
+    }
+    ```
+
+    Set `<package_hash>` to `12200000000000000000000000000000000000000000000000000000000000000000`, and Zig will provide the correct found value in an error message.
+
+    </details>
+
+2. Add `zigzag` as a run artifact in your `build.zig`.
+
+    <details>
+
+    <summary><code>build.zig</code> example</summary>
+
+    ```zig
+    const zigzag = b.dependency("zigzag", .{});
+    const zigzag_run = b.addRunArtifact(zigzag.artifact("exe"));
+    if (b.args) |args| {
+        zigzag_run.addArgs(args);
+    }
+    ```
+
+    </details>
 
 #### :framed_picture: Render
 

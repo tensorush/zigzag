@@ -1,4 +1,10 @@
 .{
     .name = "zigzag",
-    .version = "1.2.2",
+    .version = "1.3.0",
+    .dependencies = .{
+        .clap = .{
+            .url = "https://github.com/Hejsil/zig-clap/archive/f49b947.tar.gz",
+            .hash = "1220f48518ce22882e102255ed3bcdb7aeeb4891f50b2cdd3bd74b5b2e24d3149ba2",
+        },
+    },
 }

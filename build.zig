@@ -3,27 +3,36 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const root_source_file = std.Build.FileSource.relative("src/main.zig");
 
-    // Zigzag path tracer
-    const zigzag_step = b.step("zigzag", "Run Zigzag path tracer");
+    // Dependencies
+    const clap_dep = b.dependency("clap", .{});
+    const clap_mod = clap_dep.module("clap");
 
-    const zigzag = b.addExecutable(.{
+    // Executable
+    const exe_step = b.step("exe", "Run Zigzag path tracer");
+
+    const exe = b.addExecutable(.{
         .name = "zigzag",
         .root_source_file = root_source_file,
         .target = b.standardTargetOptions(.{}),
         .optimize = b.standardOptimizeOption(.{}),
-        .version = .{ .major = 1, .minor = 2, .patch = 2 },
+        .version = .{ .major = 1, .minor = 3, .patch = 0 },
     });
-    b.installArtifact(zigzag);
+    exe.addModule("clap", clap_mod);
+    b.installArtifact(exe);
 
-    const zigzag_run = b.addRunArtifact(zigzag);
-    zigzag_step.dependOn(&zigzag_run.step);
-    b.default_step.dependOn(zigzag_step);
+    const exe_run = b.addRunArtifact(exe);
+    if (b.args) |args| {
+        exe_run.addArgs(args);
+    }
+
+    exe_step.dependOn(&exe_run.step);
+    b.default_step.dependOn(exe_step);
 
     // Lints
     const lints_step = b.step("lint", "Run lints");
 
     const lints = b.addFmt(.{
-        .paths = &[_][]const u8{ "src", "build.zig" },
+        .paths = &.{ "src", "build.zig" },
         .check = true,
     });
 

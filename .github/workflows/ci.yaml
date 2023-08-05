@@ -9,6 +9,8 @@ on:
     branches: [main]
     paths: ["**.zig"]
 
+  workflow_dispatch:
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -19,13 +21,11 @@ jobs:
 
       - name: Set up Zig
         uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: master
 
       - name: Run Zigzag path tracer
         run: |
           zig env
-          zig build zigzag
+          zig build exe -- -f 32 -c 128 renders/render.ppm
 
   lint:
     runs-on: ubuntu-latest
@@ -36,8 +36,6 @@ jobs:
 
       - name: Set up Zig
         uses: goto-bus-stop/setup-zig@v2
-        with:
-          version: master
 
       - name: Run lints
         run: zig build lint
