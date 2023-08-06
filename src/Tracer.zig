@@ -61,6 +61,7 @@ const Ray = struct {
 
 pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels: []u8, offset: u32, size: u32, rng: std.rand.Random, render_dim: u16) void {
     defer wait_group.finish();
+
     const camera = self.scene.camera;
     const x_direction = vector.Vec{ camera.fov, 0.0, 0.0, 0.0 };
     var y_direction = vector.normalize(vector.crossProduct(x_direction, camera.direction)) * @as(vector.Vec, @splat(camera.fov));
@@ -72,12 +73,16 @@ pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels:
     const start_y = offset / render_dim;
     var x = start_x;
     var y = start_y;
+
     samplePixels(&chunk_samples, rng);
     applyTentFilter(&chunk_samples);
+
     var pixel_offset = offset * vector.LEN;
     const end_offset = pixel_offset + size * vector.LEN;
+
     while (pixel_offset < end_offset) : (pixel_offset += vector.LEN) {
         samplePixels(&sphere_samples, rng);
+
         var ssaa_color_vec: vector.Vec = @splat(0.0);
         var ssaa_factor: u8 = 0;
         while (ssaa_factor < SSAA_FACTOR) : (ssaa_factor += 1) {
@@ -93,6 +98,7 @@ pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels:
             }
             ssaa_color_vec += raw_color_vec * @as(vector.Vec, @splat(1.0 / @as(f64, @floatFromInt(SSAA_FACTOR))));
         }
+
         const pixel = getPixel(ssaa_color_vec);
         color_pixels[pixel_offset] = pixel[0];
         color_pixels[pixel_offset + 1] = pixel[1];
@@ -263,9 +269,12 @@ fn reflect(direction: vector.Vec, normal: vector.Vec) vector.Vec {
 pub fn renderPpm(color_pixels: []const u8, render_dim: u16, render_file_path: []const u8) (std.fs.File.OpenError || std.os.WriteError)!void {
     const render_file = try std.fs.cwd().createFile(render_file_path, .{});
     defer render_file.close();
+
     var buf_writer = std.io.bufferedWriter(render_file.writer());
     const writer = buf_writer.writer();
+
     try writer.print("P3\n{d} {d} {d}\n", .{ render_dim, render_dim, NUM_COLORS });
+
     for (color_pixels, 1..) |color_pixel, i| {
         if (i % 4 == 0) {
             try writer.writeAll("\n");
@@ -273,6 +282,7 @@ pub fn renderPpm(color_pixels: []const u8, render_dim: u16, render_file_path: []
             try writer.print("{d} ", .{color_pixel});
         }
     }
+
     try buf_writer.flush();
 }
 
