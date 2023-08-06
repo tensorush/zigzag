@@ -60,8 +60,8 @@ pub fn main() anyerror!void {
     }
 
     const render_size = @as(u32, render_dim) * @as(u32, render_dim);
-    const num_chunks = try std.math.divExact(u32, render_size, @as(u32, chunk_size));
-    const num_color_pixels = render_size * @as(u32, vector.LEN);
+    const num_chunks = try std.math.divExact(u32, render_size, chunk_size);
+    const num_color_pixels = render_size * vector.LEN;
 
     var tracer = Tracer{ .scene = Scene.initCornellBox() };
 
