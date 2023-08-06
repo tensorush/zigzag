@@ -1,6 +1,6 @@
 .{
     .name = "zigzag",
-    .version = "1.3.0",
+    .version = "1.4.0",
     .dependencies = .{
         .clap = .{
             .url = "https://github.com/Hejsil/zig-clap/archive/f49b947.tar.gz",

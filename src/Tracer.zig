@@ -7,12 +7,12 @@ const Tracer = @This();
 const NUM_COLORS: u8 = 255;
 const RAY_BIAS: f64 = 0.0005;
 const SSAA_FACTOR: u8 = 1 << 3;
-const NUM_FRAME_DIMS: u16 = 1 << 1;
+const NUM_RENDER_DIMS: u16 = 1 << 1;
 const MIN_NUM_BOUNCES: u8 = 1 << 2;
 const MAX_NUM_BOUNCES: u8 = 1 << 3;
 const NUM_SAMPLES_PER_PIXEL: u16 = 1 << 8;
 
-samples: [NUM_SAMPLES_PER_PIXEL * NUM_FRAME_DIMS]f64 = undefined,
+samples: [NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64 = undefined,
 scene: Scene,
 
 const Ray = struct {
@@ -59,12 +59,12 @@ const Ray = struct {
     }
 };
 
-pub fn tracePaths(self: Tracer, frame: []u8, offset: u16, size: u16, rng: std.rand.Random, render_dim: u16) void {
+pub fn tracePaths(self: Tracer, render: []u8, offset: u32, size: u32, rng: std.rand.Random, render_dim: u16) void {
     const camera = self.scene.camera;
     const x_direction = vector.Vec{ camera.fov, 0.0, 0.0, 0.0 };
     var y_direction = vector.normalize(vector.crossProduct(x_direction, camera.direction)) * @as(vector.Vec, @splat(camera.fov));
-    var sphere_samples: [NUM_SAMPLES_PER_PIXEL * NUM_FRAME_DIMS]f64 = undefined;
-    var chunk_samples: [NUM_SAMPLES_PER_PIXEL * NUM_FRAME_DIMS]f64 = undefined;
+    var sphere_samples: [NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64 = undefined;
+    var chunk_samples: [NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64 = undefined;
     const ray_origin = vector.Vec{ 50.0, 52.0, 295.6, 0.0 };
     const ray_factor: vector.Vec = @splat(136.0);
     const start_x = offset % render_dim;
@@ -83,19 +83,19 @@ pub fn tracePaths(self: Tracer, frame: []u8, offset: u16, size: u16, rng: std.ra
             var raw_color_vec: vector.Vec = @splat(0.0);
             var sample_idx: u16 = 0;
             while (sample_idx < NUM_SAMPLES_PER_PIXEL) : (sample_idx += 1) {
-                const x_chunk_direction = x_direction * @as(vector.Vec, @splat((((@as(f64, @floatFromInt((ssaa_factor & 1))) + 0.5 + chunk_samples[sample_idx * NUM_FRAME_DIMS]) / 2.0) + @as(f64, @floatFromInt(x))) / @as(f64, @floatFromInt(render_dim)) - 0.5));
-                const y_chunk_direction = y_direction * @as(vector.Vec, @splat(-((((@as(f64, @floatFromInt((ssaa_factor >> 1))) + 0.5 + chunk_samples[sample_idx * NUM_FRAME_DIMS + 1]) / 2.0) + @as(f64, @floatFromInt(y))) / @as(f64, @floatFromInt(render_dim)) - 0.5)));
+                const x_chunk_direction = x_direction * @as(vector.Vec, @splat((((@as(f64, @floatFromInt((ssaa_factor & 1))) + 0.5 + chunk_samples[sample_idx * NUM_RENDER_DIMS]) / 2.0) + @as(f64, @floatFromInt(x))) / @as(f64, @floatFromInt(render_dim)) - 0.5));
+                const y_chunk_direction = y_direction * @as(vector.Vec, @splat(-((((@as(f64, @floatFromInt((ssaa_factor >> 1))) + 0.5 + chunk_samples[sample_idx * NUM_RENDER_DIMS + 1]) / 2.0) + @as(f64, @floatFromInt(y))) / @as(f64, @floatFromInt(render_dim)) - 0.5)));
                 const ray_direction = vector.normalize(x_chunk_direction + y_chunk_direction + camera.direction);
                 const ray = Ray{ .direction = ray_direction, .origin = ray_origin + ray_direction * ray_factor };
-                var ray_color_vec = self.tracePath(ray, sphere_samples[sample_idx * NUM_FRAME_DIMS], sphere_samples[sample_idx * NUM_FRAME_DIMS + 1], rng);
+                var ray_color_vec = self.tracePath(ray, sphere_samples[sample_idx * NUM_RENDER_DIMS], sphere_samples[sample_idx * NUM_RENDER_DIMS + 1], rng);
                 raw_color_vec += ray_color_vec * @as(vector.Vec, @splat(1.0 / @as(f64, NUM_SAMPLES_PER_PIXEL)));
             }
             ssaa_color_vec += raw_color_vec * @as(vector.Vec, @splat(1.0 / @as(f64, @floatFromInt(SSAA_FACTOR))));
         }
         const pixel = getPixel(ssaa_color_vec);
-        frame[pixel_offset] = pixel[0];
-        frame[pixel_offset + 1] = pixel[1];
-        frame[pixel_offset + 2] = pixel[2];
+        render[pixel_offset] = pixel[0];
+        render[pixel_offset + 1] = pixel[1];
+        render[pixel_offset + 2] = pixel[2];
         x += 1;
         if (x == render_dim) {
             x = 0;
@@ -163,8 +163,8 @@ fn tracePath(self: Tracer, ray: Ray, x_sphere_sample: f64, y_sphere_sample: f64,
                 },
             }
             sample_idx = rng.intRangeAtMost(u16, 0, NUM_SAMPLES_PER_PIXEL - 1);
-            cur_x_sphere_sample = self.samples[sample_idx * NUM_FRAME_DIMS];
-            cur_y_sphere_sample = self.samples[sample_idx * NUM_FRAME_DIMS + 1];
+            cur_x_sphere_sample = self.samples[sample_idx * NUM_RENDER_DIMS];
+            cur_y_sphere_sample = self.samples[sample_idx * NUM_RENDER_DIMS + 1];
         } else {
             break;
         }
@@ -203,7 +203,7 @@ fn sampleLights(scene: Scene, hit_point: vector.Vec, normal: vector.Vec, ray_dir
     return color;
 }
 
-pub fn samplePixels(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_FRAME_DIMS]f64, rng: std.rand.Random) void {
+pub fn samplePixels(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64, rng: std.rand.Random) void {
     const x_strata = @sqrt(@as(f64, NUM_SAMPLES_PER_PIXEL));
     const y_strata = @as(f64, NUM_SAMPLES_PER_PIXEL) / x_strata;
     var sample_idx: u16 = 0;
@@ -218,13 +218,13 @@ pub fn samplePixels(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_FRAME_DIMS]f64, rng: 
     }
 }
 
-fn applyTentFilter(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_FRAME_DIMS]f64) void {
+fn applyTentFilter(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64) void {
     var sample_idx: u16 = 0;
     while (sample_idx < NUM_SAMPLES_PER_PIXEL) : (sample_idx += 1) {
-        const x = samples[sample_idx * NUM_FRAME_DIMS] * @as(f64, NUM_FRAME_DIMS);
-        const y = samples[sample_idx * NUM_FRAME_DIMS + 1] * @as(f64, NUM_FRAME_DIMS);
-        samples[sample_idx * NUM_FRAME_DIMS] = if (x < 1.0) @sqrt(x) - 1.0 else 1.0 - @sqrt(2.0 - x);
-        samples[sample_idx * NUM_FRAME_DIMS + 1] = if (y < 1.0) @sqrt(y) - 1.0 else 1.0 - @sqrt(2.0 - y);
+        const x = samples[sample_idx * NUM_RENDER_DIMS] * @as(f64, NUM_RENDER_DIMS);
+        const y = samples[sample_idx * NUM_RENDER_DIMS + 1] * @as(f64, NUM_RENDER_DIMS);
+        samples[sample_idx * NUM_RENDER_DIMS] = if (x < 1.0) @sqrt(x) - 1.0 else 1.0 - @sqrt(2.0 - x);
+        samples[sample_idx * NUM_RENDER_DIMS + 1] = if (y < 1.0) @sqrt(y) - 1.0 else 1.0 - @sqrt(2.0 - y);
     }
 }
 
@@ -256,16 +256,16 @@ fn sampleHemisphereDiffuse(x_sphere_sample: f64, y_sphere_sample: f64) vector.Ve
 }
 
 fn reflect(direction: vector.Vec, normal: vector.Vec) vector.Vec {
-    return normal * @as(vector.Vec, @splat(vector.dotProduct(direction, normal) * @as(f64, NUM_FRAME_DIMS))) - direction;
+    return normal * @as(vector.Vec, @splat(vector.dotProduct(direction, normal) * @as(f64, NUM_RENDER_DIMS))) - direction;
 }
 
-pub fn renderPpm(frame: []const u8, render_dim: u16, render_file_path: []const u8) (std.fs.File.OpenError || std.os.WriteError)!void {
+pub fn renderPpm(render: []const u8, render_dim: u16, render_file_path: []const u8) (std.fs.File.OpenError || std.os.WriteError)!void {
     const render_file = try std.fs.cwd().createFile(render_file_path, .{});
     defer render_file.close();
     var buf_writer = std.io.bufferedWriter(render_file.writer());
     const writer = buf_writer.writer();
     try writer.print("P3\n{d} {d} {d}\n", .{ render_dim, render_dim, NUM_COLORS });
-    for (frame, 1..) |pixel, i| {
+    for (render, 1..) |pixel, i| {
         if (i % 4 == 0) {
             try writer.writeAll("\n");
         } else {

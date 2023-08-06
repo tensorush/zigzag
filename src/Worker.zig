@@ -11,15 +11,15 @@ cur_job_count: u32 = 0,
 
 pub const Chunk = struct {
     tracer: *Tracer,
-    frame: []u8,
-    offset: u16,
-    size: u16,
+    render: []u8,
+    offset: u32,
+    size: u32,
 };
 
 pub fn spawn(self: *Worker, rng: std.rand.Random, render_dim: u16) void {
     while (!self.is_done.load(.Acquire)) {
         if (self.queue.get()) |chunk| {
-            chunk.data.tracer.tracePaths(chunk.data.frame, chunk.data.offset, chunk.data.size, rng, render_dim);
+            chunk.data.tracer.tracePaths(chunk.data.render, chunk.data.offset, chunk.data.size, rng, render_dim);
             _ = self.done_count.fetchAdd(1, .Release);
             std.Thread.Futex.wake(self.done_count, 1);
         } else {

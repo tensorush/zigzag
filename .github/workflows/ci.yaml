@@ -25,7 +25,7 @@ jobs:
       - name: Run Zigzag path tracer
         run: |
           zig env
-          zig build exe -- -f 32 -c 128 renders/render.ppm
+          zig build exe -- -r 32 -c 128 renders/render.ppm
 
   lint:
     runs-on: ubuntu-latest
