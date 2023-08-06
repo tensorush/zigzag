@@ -3,11 +3,8 @@ const clap = @import("clap");
 const Scene = @import("Scene.zig");
 const Tracer = @import("Tracer.zig");
 const vector = @import("vector.zig");
-const Worker = @import("Worker.zig");
 
-const IS_MULTI_THREADED = true;
-const MAX_NUM_CORES: u8 = 1 << 4;
-const MAX_RENDER_SIZE: u32 = 1 << 22;
+const MAX_NUM_COLOR_PIXELS: u32 = 1 << 22;
 
 const PARAMS = clap.parseParamsComptime(
     \\-r, --render <u16>  Square render dimension.
@@ -19,9 +16,22 @@ const PARAMS = clap.parseParamsComptime(
 
 const log = std.log.scoped(.zigzag);
 
-const MainError = std.os.GetRandomError || std.Thread.CpuCountError || std.Thread.SpawnError || std.fs.File.OpenError || std.os.WriteError || std.time.Timer.Error;
+const Error = error{
+    UnexpectedRemainder,
+    DivisionByZero,
+    Overflow,
+} || std.os.GetRandomError || std.Thread.CpuCountError || std.Thread.SpawnError || std.fs.File.OpenError || std.os.WriteError || std.time.Timer.Error;
 
 pub fn main() anyerror!void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) {
+        @panic("PANIC: Memory leak has occurred!");
+    };
+
+    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
     var diag = clap.Diagnostic{};
     var res = clap.parse(clap.Help, &PARAMS, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
         diag.report(std.io.getStdErr().writer(), err) catch {};
@@ -30,8 +40,8 @@ pub fn main() anyerror!void {
     defer res.deinit();
 
     var render_file_path: []const u8 = "renders/render.ppm";
-    var chunk_size: u16 = 1 << 8;
     var render_dim: u16 = 1 << 10;
+    var chunk_size: u16 = 1 << 8;
 
     if (res.args.chunk) |chunk| {
         chunk_size = chunk;
@@ -49,8 +59,9 @@ pub fn main() anyerror!void {
         return clap.help(std.io.getStdErr().writer(), clap.Help, &PARAMS, .{});
     }
 
-    const render_size = @as(u32, render_dim) * @as(u32, render_dim) * @as(u32, vector.LEN);
-    const num_chunks = @as(u32, render_dim) * @as(u32, render_dim) / @as(u32, chunk_size);
+    const render_size = @as(u32, render_dim) * @as(u32, render_dim);
+    const num_chunks = try std.math.divExact(u32, render_size, @as(u32, chunk_size));
+    const num_color_pixels = render_size * @as(u32, vector.LEN);
 
     var tracer = Tracer{ .scene = Scene.initCornellBox() };
 
@@ -63,55 +74,29 @@ pub fn main() anyerror!void {
 
     Tracer.samplePixels(&tracer.samples, rng);
 
-    const num_cores: u8 = @intCast(try std.Thread.getCpuCount());
-    log.info("Number of CPU cores: {d}", .{num_cores});
-
-    var threads = std.BoundedArray(std.Thread, MAX_NUM_CORES){};
-    var workers = std.BoundedArray(Worker, MAX_NUM_CORES){};
-    var render = std.BoundedArray(u8, MAX_RENDER_SIZE){};
-    render.appendNTimesAssumeCapacity(0, render_size);
+    var color_pixels = std.BoundedArray(u8, MAX_NUM_COLOR_PIXELS){};
+    color_pixels.appendNTimesAssumeCapacity(0, num_color_pixels);
 
     var timer = try std.time.Timer.start();
     const start = timer.lap();
 
-    if (IS_MULTI_THREADED) {
-        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        defer if (gpa.deinit() == .leak) {
-            @panic("PANIC: Memory leak has occurred!");
-        };
+    {
+        var thread_pool: std.Thread.Pool = undefined;
+        try thread_pool.init(.{ .allocator = allocator });
+        defer thread_pool.deinit();
 
-        var arena = std.heap.ArenaAllocator.init(gpa.allocator());
-        defer arena.deinit();
-        var allocator = arena.allocator();
-
-        var work_queue = std.atomic.Queue(Worker.Chunk).init();
-        var done_count = std.atomic.Atomic(u32).init(0);
-
-        var worker_idx: u8 = 0;
-        while (worker_idx < num_cores) : (worker_idx += 1) {
-            workers.appendAssumeCapacity(.{ .done_count = &done_count, .queue = &work_queue });
-            threads.appendAssumeCapacity(try std.Thread.spawn(.{}, Worker.spawn, .{ &workers.slice()[worker_idx], rng, render_dim }));
-        }
+        var wait_group = std.Thread.WaitGroup{};
+        defer wait_group.wait();
 
         var chunk_idx: u32 = 0;
-        var thread_idx: u8 = 0;
         while (chunk_idx < num_chunks) : (chunk_idx += 1) {
-            const node = try allocator.create(std.atomic.Queue(Worker.Chunk).Node);
-            node.* = .{ .data = .{ .tracer = &tracer, .render = render.slice(), .offset = chunk_idx * chunk_size, .size = chunk_size } };
-            workers.slice()[thread_idx].put(node);
-            thread_idx = (thread_idx + 1) % num_cores;
-        }
+            wait_group.start();
 
-        Worker.waitUntilDone(&done_count, num_chunks);
-
-        for (threads.constSlice(), 0..) |thread, i| {
-            Worker.join(thread, &workers.slice()[i]);
+            try thread_pool.spawn(Tracer.tracePaths, .{ tracer, &wait_group, color_pixels.slice(), chunk_idx * chunk_size, chunk_size, rng, render_dim });
         }
-    } else {
-        Tracer.tracePaths(tracer, render.slice(), 0, render_dim * render_dim, rng, render_dim);
     }
 
     log.info("Total duration: {}", .{std.fmt.fmtDuration(timer.read() - start)});
 
-    try Tracer.renderPpm(render.constSlice(), render_dim, render_file_path);
+    try Tracer.renderPpm(color_pixels.constSlice(), render_dim, render_file_path);
 }
