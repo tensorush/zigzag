@@ -1,8 +1,6 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const root_source_file = std.Build.FileSource.relative("src/main.zig");
-
     // Dependencies
     const clap_dep = b.dependency("clap", .{});
     const clap_mod = clap_dep.module("clap");
@@ -12,10 +10,10 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "zigzag",
-        .root_source_file = root_source_file,
+        .root_source_file = std.Build.FileSource.relative("src/main.zig"),
         .target = b.standardTargetOptions(.{}),
         .optimize = b.standardOptimizeOption(.{}),
-        .version = .{ .major = 1, .minor = 5, .patch = 0 },
+        .version = .{ .major = 1, .minor = 5, .patch = 1 },
     });
     exe.addModule("clap", clap_mod);
     b.installArtifact(exe);
