@@ -40,7 +40,7 @@ const Camera = struct {
 };
 
 pub fn initCornellBox() Scene {
-    var camera = Scene.Camera{ .direction = vector.normalize(.{ 0.0, -0.042612, -1.0, 0.0 }), .fov = std.math.tan(55.0 * std.math.pi / 180.0 * 0.5) };
+    const camera = Scene.Camera{ .direction = vector.normalize(.{ 0.0, -0.042612, -1.0, 0.0 }), .fov = std.math.tan(55.0 * std.math.pi / 180.0 * 0.5) };
     const glossy_white = Material{ .kind = .Glossy, .diffuse = .{ 0.3, 0.05, 0.05, 0.0 }, .specular = @splat(0.69), .specular_exponent = 45.0 };
     const mirror = Material{ .kind = .Mirror, .diffuse = @splat(0.99) };
     const diffuse_green = Material{ .diffuse = .{ 0.15, 0.95, 0.15, 0.0 } };

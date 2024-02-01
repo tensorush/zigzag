@@ -7,25 +7,19 @@ const vector = @import("vector.zig");
 const MAX_NUM_COLOR_PIXELS: u32 = 1 << 22;
 
 const PARAMS = clap.parseParamsComptime(
-    \\-r, --render <u16>  Square render dimension.
-    \\-c, --chunk <u16>   Worker chunk size.
-    \\-h, --help          Help menu.
-    \\<str>               Render file path.
+    \\-r, --render <u16>  Specify square render dimension size.
+    \\-c, --chunk <u16>   Specify worker chunk size.
+    \\-h, --help          Display help menu.
+    \\<str>               Specify render file path.
     \\
 );
 
 const log = std.log.scoped(.zigzag);
 
-const Error = error{
-    UnexpectedRemainder,
-    DivisionByZero,
-    Overflow,
-} || std.os.GetRandomError || std.Thread.CpuCountError || std.Thread.SpawnError || std.fs.File.OpenError || std.os.WriteError || std.time.Timer.Error;
-
-pub fn main() anyerror!void {
+pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) {
-        @panic("Memory leak has occurred!\n");
+        @panic("Memory leak has occurred!");
     };
 
     var arena = std.heap.ArenaAllocator.init(gpa.allocator());
@@ -33,7 +27,7 @@ pub fn main() anyerror!void {
     const allocator = arena.allocator();
 
     var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &PARAMS, clap.parsers.default, .{ .diagnostic = &diag }) catch |err| {
+    var res = clap.parse(clap.Help, &PARAMS, clap.parsers.default, .{ .allocator = allocator, .diagnostic = &diag }) catch |err| {
         diag.report(std.io.getStdErr().writer(), err) catch {};
         return err;
     };
@@ -70,9 +64,9 @@ pub fn main() anyerror!void {
         try std.os.getrandom(std.mem.asBytes(&seed));
         break :blk seed;
     });
-    const rng = prng.random();
+    const random = prng.random();
 
-    Tracer.samplePixels(&tracer.samples, rng);
+    Tracer.samplePixels(&tracer.samples, random);
 
     var color_pixels = std.BoundedArray(u8, MAX_NUM_COLOR_PIXELS){};
     color_pixels.appendNTimesAssumeCapacity(0, num_color_pixels);
@@ -92,7 +86,7 @@ pub fn main() anyerror!void {
         while (chunk_idx < num_chunks) : (chunk_idx += 1) {
             wait_group.start();
 
-            try thread_pool.spawn(Tracer.tracePaths, .{ tracer, &wait_group, color_pixels.slice(), chunk_idx * chunk_size, chunk_size, rng, render_dim });
+            try thread_pool.spawn(Tracer.tracePaths, .{ tracer, &wait_group, color_pixels.slice(), chunk_idx * chunk_size, chunk_size, random, render_dim });
         }
     }
 

@@ -59,12 +59,12 @@ const Ray = struct {
     }
 };
 
-pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels: []u8, offset: u32, size: u32, rng: std.rand.Random, render_dim: u16) void {
+pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels: []u8, offset: u32, size: u32, random: std.rand.Random, render_dim: u16) void {
     defer wait_group.finish();
 
     const camera = self.scene.camera;
     const x_direction = vector.Vec{ camera.fov, 0.0, 0.0, 0.0 };
-    var y_direction = vector.normalize(vector.crossProduct(x_direction, camera.direction)) * @as(vector.Vec, @splat(camera.fov));
+    const y_direction = vector.normalize(vector.crossProduct(x_direction, camera.direction)) * @as(vector.Vec, @splat(camera.fov));
     var sphere_samples: [NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64 = undefined;
     var chunk_samples: [NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64 = undefined;
     const ray_origin = vector.Vec{ 50.0, 52.0, 295.6, 0.0 };
@@ -74,14 +74,14 @@ pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels:
     var x = start_x;
     var y = start_y;
 
-    samplePixels(&chunk_samples, rng);
+    samplePixels(&chunk_samples, random);
     applyTentFilter(&chunk_samples);
 
     var pixel_offset = offset * vector.LEN;
     const end_offset = pixel_offset + size * vector.LEN;
 
     while (pixel_offset < end_offset) : (pixel_offset += vector.LEN) {
-        samplePixels(&sphere_samples, rng);
+        samplePixels(&sphere_samples, random);
 
         var ssaa_color_vec: vector.Vec = @splat(0.0);
         var ssaa_factor: u8 = 0;
@@ -93,7 +93,7 @@ pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels:
                 const y_chunk_direction = y_direction * @as(vector.Vec, @splat(-((((@as(f64, @floatFromInt((ssaa_factor >> 1))) + 0.5 + chunk_samples[sample_idx * NUM_RENDER_DIMS + 1]) / 2.0) + @as(f64, @floatFromInt(y))) / @as(f64, @floatFromInt(render_dim)) - 0.5)));
                 const ray_direction = vector.normalize(x_chunk_direction + y_chunk_direction + camera.direction);
                 const ray = Ray{ .direction = ray_direction, .origin = ray_origin + ray_direction * ray_factor };
-                var ray_color_vec = self.tracePath(ray, sphere_samples[sample_idx * NUM_RENDER_DIMS], sphere_samples[sample_idx * NUM_RENDER_DIMS + 1], rng);
+                const ray_color_vec = self.tracePath(ray, sphere_samples[sample_idx * NUM_RENDER_DIMS], sphere_samples[sample_idx * NUM_RENDER_DIMS + 1], random);
                 raw_color_vec += ray_color_vec * @as(vector.Vec, @splat(1.0 / @as(f64, NUM_SAMPLES_PER_PIXEL)));
             }
             ssaa_color_vec += raw_color_vec * @as(vector.Vec, @splat(1.0 / @as(f64, @floatFromInt(SSAA_FACTOR))));
@@ -111,7 +111,7 @@ pub fn tracePaths(self: Tracer, wait_group: *std.Thread.WaitGroup, color_pixels:
     }
 }
 
-fn tracePath(self: Tracer, ray: Ray, x_sphere_sample: f64, y_sphere_sample: f64, rng: std.rand.Random) vector.Vec {
+fn tracePath(self: Tracer, ray: Ray, x_sphere_sample: f64, y_sphere_sample: f64, random: std.rand.Random) vector.Vec {
     var color_bleeding_factor: vector.Vec = @splat(1.0);
     var ray_color_vec: vector.Vec = @splat(0.0);
     var cur_x_sphere_sample = x_sphere_sample;
@@ -131,7 +131,7 @@ fn tracePath(self: Tracer, ray: Ray, x_sphere_sample: f64, y_sphere_sample: f64,
             }
             const max_diffuse = vector.getMaxComponent(diffuse);
             if (bounce_idx > MIN_NUM_BOUNCES or max_diffuse < std.math.floatEps(f64)) {
-                if (rng.float(f64) > max_diffuse) {
+                if (random.float(f64) > max_diffuse) {
                     break;
                 }
                 diffuse /= @splat(max_diffuse);
@@ -156,7 +156,7 @@ fn tracePath(self: Tracer, ray: Ray, x_sphere_sample: f64, y_sphere_sample: f64,
                     const max_specular = vector.getMaxComponent(material.specular);
                     const specular_probability = max_specular / (max_specular + max_diffuse);
                     const specular_factor = 1.0 / specular_probability;
-                    if (rng.float(f64) > specular_probability) {
+                    if (random.float(f64) > specular_probability) {
                         traced_ray = interreflectDiffuse(normal, hit_point, cur_x_sphere_sample, cur_y_sphere_sample);
                         color_bleeding_factor *= diffuse * @as(vector.Vec, @splat((1.0 / (1.0 - 1.0 / specular_factor))));
                     } else {
@@ -169,7 +169,7 @@ fn tracePath(self: Tracer, ray: Ray, x_sphere_sample: f64, y_sphere_sample: f64,
                     color_bleeding_factor *= diffuse;
                 },
             }
-            sample_idx = rng.intRangeAtMost(u16, 0, NUM_SAMPLES_PER_PIXEL - 1);
+            sample_idx = random.intRangeAtMost(u16, 0, NUM_SAMPLES_PER_PIXEL - 1);
             cur_x_sphere_sample = self.samples[sample_idx * NUM_RENDER_DIMS];
             cur_y_sphere_sample = self.samples[sample_idx * NUM_RENDER_DIMS + 1];
         } else {
@@ -210,7 +210,7 @@ fn sampleLights(scene: Scene, hit_point: vector.Vec, normal: vector.Vec, ray_dir
     return color;
 }
 
-pub fn samplePixels(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64, rng: std.rand.Random) void {
+pub fn samplePixels(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64, random: std.rand.Random) void {
     const x_strata = @sqrt(@as(f64, NUM_SAMPLES_PER_PIXEL));
     const y_strata = @as(f64, NUM_SAMPLES_PER_PIXEL) / x_strata;
     var sample_idx: u16 = 0;
@@ -218,8 +218,8 @@ pub fn samplePixels(samples: *[NUM_SAMPLES_PER_PIXEL * NUM_RENDER_DIMS]f64, rng:
     while (y_step < y_strata) : (y_step += 1.0) {
         var x_step: f64 = 0.0;
         while (x_step < x_strata) : (x_step += 1.0) {
-            samples[sample_idx] = (x_step + rng.float(f64)) / x_strata;
-            samples[sample_idx + 1] = (y_step + rng.float(f64)) / y_strata;
+            samples[sample_idx] = (x_step + random.float(f64)) / x_strata;
+            samples[sample_idx + 1] = (y_step + random.float(f64)) / y_strata;
             sample_idx += 2;
         }
     }

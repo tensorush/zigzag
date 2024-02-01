@@ -10,7 +10,7 @@ pub const Basis = struct {
 
     pub fn init(u: Vec) Basis {
         var v: Vec = undefined;
-        if (@fabs(u[0]) > @fabs(u[1])) {
+        if (@abs(u[0]) > @abs(u[1])) {
             const len = 1.0 / @sqrt(u[0] * u[0] + u[2] * u[2]);
             v = .{ -u[2] * len, 0.0, u[0] * len, 0.0 };
         } else {
@@ -22,9 +22,9 @@ pub const Basis = struct {
 };
 
 pub fn transformIntoBasis(u_in: Vec, u_x: Vec, u_y: Vec, u_z: Vec) Vec {
-    var v_x = u_x * @as(Vec, @splat(u_in[0]));
-    var v_y = u_y * @as(Vec, @splat(u_in[1]));
-    var v_z = u_z * @as(Vec, @splat(u_in[2]));
+    const v_x = u_x * @as(Vec, @splat(u_in[0]));
+    const v_y = u_y * @as(Vec, @splat(u_in[1]));
+    const v_z = u_z * @as(Vec, @splat(u_in[2]));
     return v_x + v_y + v_z;
 }
 
